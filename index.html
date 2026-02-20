@@ -1,1 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DARK HACKER TEAM PREMIUM TOOL</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:black;font-family:Courier New, monospace;color:#00ffcc;overflow:hidden;}
+canvas{position:fixed;top:0;left:0;z-index:-1;}
+.container{width:90%;max-width:750px;margin:60px auto;padding:25px;border-radius:20px;background:rgba(0,0,0,0.7);backdrop-filter:blur(10px);box-shadow:0 0 40px #00ffcc;text-align:center;}
+h1{margin-bottom:20px;text-shadow:0 0 20px #00ffcc;}
+input{width:65%;padding:12px;border-radius:10px;border:1px solid #00ffcc;background:black;color:#00ffcc;font-size:16px;}
+button{padding:12px 20px;border:none;border-radius:10px;background:#00ffcc;color:black;font-weight:bold;cursor:pointer;transition:0.3s;margin-left:5px;}
+button:hover{box-shadow:0 0 20px #00ffcc;}
+.result{margin-top:25px;text-align:left;line-height:1.8;font-size:16px;}
+.copy-btn{margin-left:10px;padding:3px 8px;border:none;border-radius:5px;background:#00ffcc;color:black;cursor:pointer;}
+.terminal{background:black;color:#00ff88;font-family:monospace;padding:10px;margin-top:20px;height:180px;overflow:auto;border:1px solid #00ffcc;border-radius:10px;}
+hr{border:1px dashed #00ffcc;margin:10px 0;}
+a{color:#00ffaa;}
+</style>
+</head>
+<body>
 
+<canvas id="matrix"></canvas>
+
+<div class="container">
+<h1>⚡ DARK HACKER TEAM PREMIUM TOOL ⚡</h1>
+<input type="text" id="input" placeholder="Enter Domain or IP">
+<button onclick="scan()">SCAN</button>
+
+<div class="result" id="output">Waiting for scan...</div>
+<div class="terminal" id="terminal">Terminal Output...</div>
+</div>
+
+<script>
+// MATRIX BACKGROUND
+const canvas=document.getElementById("matrix");
+const ctx=canvas.getContext("2d");
+canvas.height=window.innerHeight;
+canvas.width=window.innerWidth;
+let letters="01".split("");
+let fontSize=16;
+let columns=canvas.width/fontSize;
+let drops=[];
+for(let x=0;x<columns;x++) drops[x]=1;
+function draw(){ctx.fillStyle="rgba(0,0,0,0.05)";ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle="#00ffcc";ctx.font=fontSize+"px monospace";for(let i=0;i<drops.length;i++){let text=letters[Math.floor(Math.random()*letters.length)];ctx.fillText(text,i*fontSize,drops[i]*fontSize);if(drops[i]*fontSize>canvas.height&&Math.random()>0.975)drops[i]=0;drops[i]++;}}
+setInterval(draw,33);
+
+// COPY FUNCTION
+function copyIP(ip){navigator.clipboard.writeText(ip).then(()=>alert(`Copied ${ip}`));}
+
+// HELPER: Detect IP
+function isIP(str){return /^(\d{1,3}\.){3}\d{1,3}$/.test(str);}
+
+// SCAN FUNCTION
+async function scan(){
+const input=document.getElementById("input").value.trim();
+const output=document.getElementById("output");
+const terminal=document.getElementById("terminal");
+if(!input){alert("Enter Domain or IP");return;}
+output.innerHTML="Scanning...";
+terminal.innerHTML="Starting scan...\n";
+
+if(isIP(input)){
+  // ===== IP MODE =====
+  const ip=input;
+  terminal.innerHTML+="Performing Reverse DNS...\n";
+  let domain="Not Found";
+  try{
+    const revRes=await fetch(`https://dns.google/resolve?name=${ip}.in-addr.arpa&type=PTR`);
+    const revData=await revRes.json();
+    if(revData.Answer) domain=revData.Answer[0].data.replace(/\.$/,"");
+  }catch{}
+
+  terminal.innerHTML+="Fetching IP info...\n";
+  let info={};
+  try{
+    const ipRes=await fetch(`https://ipwho.is/${ip}`);
+    info=await ipRes.json();
+  }catch{}
+
+  output.innerHTML=`
+  <b>IP Address:</b> ${ip} <button class="copy-btn" onclick="copyIP('${ip}')">COPY</button><br>
+  <b>Domain (Reverse DNS):</b> ${domain}<br>
+  <b>Country:</b> ${info.country || "Unknown"}<br>
+  <b>City:</b> ${info.city || "Unknown"}<br>
+  <b>Hosting Provider:</b> ${info.connection?.org || "Unknown"}<br>
+  <b>ASN:</b> ${info.connection?.asn || "Unknown"}<br>
+  <b>Map:</b> <a href="https://www.google.com/maps/search/${ip}" target="_blank">View</a>
+  `;
+  terminal.innerHTML+="Scan complete.\n";
+
+}else{
+  // ===== DOMAIN MODE =====
+  const domain=input;
+  terminal.innerHTML+="Resolving domain to IP addresses...\n";
+  try{
+    const dnsRes=await fetch(`https://dns.google/resolve?name=${domain}&type=A`);
+    const dnsData=await dnsRes.json();
+    if(!dnsData.Answer){output.innerHTML="No IP Found.";terminal.innerHTML+="No A records.\n";return;}
+    let html=`<b>Domain:</b> ${domain}<br><br>`;
+    terminal.innerHTML+="Found IP addresses:\n";
+    for(let record of dnsData.Answer){
+      const ip=record.data;
+      terminal.innerHTML+=`Fetching info for IP: ${ip}\n`;
+
+      // Reverse DNS
+      let reverse="N/A";
+      try{
+        const revRes=await fetch(`https://dns.google/resolve?name=${ip}.in-addr.arpa&type=PTR`);
+        const revData=await revRes.json();
+        reverse=revData.Answer?revData.Answer[0].data.replace(/\.$/,""):"N/A";
+      }catch{}
+
+      // IP Info
+      let country="Unknown", city="Unknown", org="Unknown", asn="Unknown";
+      try{
+        const ipRes=await fetch(`https://ipwho.is/${ip}`);
+        const info=await ipRes.json();
+        country=info.country||"Unknown";
+        city=info.city||"Unknown";
+        org=info.connection?.org||"Unknown";
+        asn=info.connection?.asn||"Unknown";
+      }catch{}
+
+      html+=`
+      <hr>
+      <b>IP Address:</b> ${ip} <button class="copy-btn" onclick="copyIP('${ip}')">COPY</button><br>
+      <b>Reverse DNS:</b> ${reverse}<br>
+      <b>Country:</b> ${country}<br>
+      <b>City:</b> ${city}<br>
+      <b>Hosting Provider:</b> ${org}<br>
+      <b>ASN:</b> ${asn}<br>
+      <b>Map:</b> <a href="https://www.google.com/maps/search/${ip}" target="_blank">View</a><br><br>
+      `;
+    }
+    output.innerHTML=html;
+    terminal.innerHTML+="Scan complete.\n";
+  }catch{output.innerHTML="Error fetching data";terminal.innerHTML+="Error occurred.\n";}
+}
+}
+</script>
+
+</body>
+</html>
